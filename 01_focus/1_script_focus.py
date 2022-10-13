@@ -21,6 +21,7 @@ path_result = output_dir + "01_focus.txt"
 model_dir = '../model/'
 model_name = 'model_2.pt'
 
+output_image_dir = "./output_image"
 
 #Load necessary libraries
 import cv2
@@ -32,23 +33,24 @@ from torchvision import transforms
 
 #Load model
 path_model = os.path.join(model_dir, model_name)
-model = torch.load(path_model, map_location=torch.device('cpu'))
-model.model.eval()
-print(model.model)
+# model = torch.load(path_model, map_location=torch.device('cpu'))
+# model.model.eval()
+# print(model.model)
 os.makedirs(output_dir, exist_ok=True)
+os.makedirs(output_image_dir, exist_ok=True)
 
 
 
 transform = transforms.Compose([transforms.ToTensor()])
 #Function for classification prediction using a model
-def predict (patch):
-    img_t = transform(patch/255).float()
-    # wp_temp = np.float32(patch)
-    img_t = torch.unsqueeze(img_t, 0)
-    # wp_temp /= 255.
-    with torch.no_grad():
-        preds = model.model.forward(img_t)
-    return preds.cpu().detach().numpy().tolist()
+# def predict (patch):
+#     img_t = transform(patch/255).float()
+#     # wp_temp = np.float32(patch)
+#     img_t = torch.unsqueeze(img_t, 0)
+#     # wp_temp /= 255.
+#     with torch.no_grad():
+#         preds = model.model.forward(img_t)
+#     return preds.cpu().detach().numpy().tolist()
 
 #Function to write result into output txt file
 def write_result (output, path_result):
@@ -74,12 +76,11 @@ for dir_name in dir_names:
         for i in range(1, 2 * num_g_lev, 2):
             image_blur = cv2.GaussianBlur(image, (i, i), 0)
             image_blur = cv2.cvtColor(image_blur, cv2.COLOR_BGR2RGB)
-            preds = predict(image_blur)
-            print(preds)
-            print("\t".join([str(round(pred, 3)) for pred in preds[0]]))
-            preds_all = preds_all + "\t".join([str(round(pred, 3)) for pred in preds[0]]) + "\t"
-        preds_all = preds_all + "\n"
-        write_result(preds_all, path_result)
+            cv2.imwrite(f"{output_image_dir}/{os.path.basename(filename)}_{i}.png", image_blur)
+            # preds = predict(image_blur)
+            # preds_all = preds_all + "\t".join([str(round(pred, 3)) for pred in preds[0]]) + "\t"
+        # preds_all = preds_all + "\n"
+        # write_result(preds_all, path_result)
             
 
 
