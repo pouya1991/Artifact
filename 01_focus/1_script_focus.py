@@ -12,33 +12,43 @@
 #Number of gaussian levels to test
 num_g_lev = 16
 #Directory for files (dataset)
-source_dir = '/source/dir/'
+source_dir = '../images/'
 #Output directory for results
-output_dir = '/output/dir/'
+output_dir = './output/dir/'
+
 path_result = output_dir + "01_focus.txt"
 #Model directory (pre-tranied prostate cancer detection model)
-model_dir = '/model/dir/'
-model_name = 'model.h5'
+model_dir = '../model/'
+model_name = 'model_2.pt'
 
 
 #Load necessary libraries
 import cv2
 import os
 import numpy as np
-from tensorflow.keras.models import load_model
+# from tensorflow.keras.models import load_model
+import torch
+from torchvision import transforms
 
 #Load model
 path_model = os.path.join(model_dir, model_name)
-model = load_model(path_model)
-model.summary()
+model = torch.load(path_model, map_location=torch.device('cpu'))
+model.model.eval()
+print(model.model)
+os.makedirs(output_dir, exist_ok=True)
 
+
+
+transform = transforms.Compose([transforms.ToTensor()])
 #Function for classification prediction using a model
 def predict (patch):
-    wp_temp = np.float32(patch)
-    wp_temp = np.expand_dims(wp_temp, axis = 0)
-    wp_temp /= 255.    
-    preds = model.predict(wp_temp)
-    return preds
+    img_t = transform(patch/255).float()
+    # wp_temp = np.float32(patch)
+    img_t = torch.unsqueeze(img_t, 0)
+    # wp_temp /= 255.
+    with torch.no_grad():
+        preds = model.model.forward(img_t)
+    return preds.cpu().detach().numpy().tolist()
 
 #Function to write result into output txt file
 def write_result (output, path_result):
@@ -61,11 +71,13 @@ for dir_name in dir_names:
         print('loaded', filename)
         preds_all = ''
         preds_all = filename + "\t"
-        for i in range(1,2*num_g_lev,2):
+        for i in range(1, 2 * num_g_lev, 2):
             image_blur = cv2.GaussianBlur(image, (i, i), 0)
             image_blur = cv2.cvtColor(image_blur, cv2.COLOR_BGR2RGB)
             preds = predict(image_blur)
-            preds_all = preds_all + str(round(preds[0,0],3)) + "\t" + str(round(preds[0,1],3)) + "\t" + str(round(preds[0,2],3)) + "\t"
+            print(preds)
+            print("\t".join([str(round(pred, 3)) for pred in preds[0]]))
+            preds_all = preds_all + "\t".join([str(round(pred, 3)) for pred in preds[0]]) + "\t"
         preds_all = preds_all + "\n"
         write_result(preds_all, path_result)
             
